@@ -7,7 +7,7 @@ library(tidyr)
 library(foreign)
 library(sf)
 
-########### Downloading County Data ######################
+########### Downloading Census Data ######################
 # must set up .Renviron file with an API key requested from here:
 # https://api.census.gov/data/key_signup.html
 # once they send you a key, put it in the .Renviron file using function
