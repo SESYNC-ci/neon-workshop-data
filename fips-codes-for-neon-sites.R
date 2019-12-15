@@ -14,21 +14,19 @@ us_states <- states(class = "sf")
 plot(us_states$geometry)
 head(us_states)
 
-# get the state
-aop %>% 
+
+aop_join_states <- aop %>% 
+  dplyr::select(-Name) %>%
   st_transform(crs = st_crs(us_states)) %>%
-  st_join(us_states)
+  st_join(us_states) %>% 
+  dplyr::select(Site, STUSPS, geometry)
 
-nh_tracts <- tigris::tracts(state = "NH", class = "sf")
+aop_statesFP <- aop_join_states %>% 
+  pull(STUSPS) %>% 
+  unique()
 
-plot(nh_tracts$geometry)
+aop_statesFP[2] %>% 
+  tigris::tracts(class = "sf", refresh = TRUE) %>%
+  st_join(aop_join_states, left = FALSE)
 
-ggplot(nh_tracts) +
-  geom_sf() +
-  geom_sf(data = aop[1,], col = "red", fill = NA)
-
-aop_bart <- aop %>% filter(Site == "D01_BART")
-
-aop_bart %>% 
-  st_transform(crs = st_crs(us_states)) %>%
-  st_join(nh_tracts) %>% View()
+aop_join_states %>% st_join(nh_tracts)
