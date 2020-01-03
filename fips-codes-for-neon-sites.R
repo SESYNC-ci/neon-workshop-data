@@ -70,7 +70,8 @@ save_tracts_for_aop_site <- function(aop_site){
     dplyr::select(STUSPS, STATEFP, COUNTYFP, TRACTCE, GEOID, NAME, NAMELSAD) %>%
     mutate(Site = aop_site)
   
-  tracts_data %>% readr::write_csv(path = glue::glue("data/tracts-data-{aop_site}.csv"))
+  tracts_data %>% 
+    readr::write_csv(path = glue::glue("data/census-geoids/tracts-data-{aop_site}.csv"))
   
   g1 <- ggplot(tracts_subset) +
     geom_sf(aes(fill = STUSPS)) +
@@ -79,7 +80,7 @@ save_tracts_for_aop_site <- function(aop_site){
     xlab(element_blank()) + ylab(element_blank()) +
     theme_bw()
   
-  filename <- glue::glue("plots/tracts-map-{aop_site}.pdf")
+  filename <- glue::glue("plots/census-geoids/tracts-map-{aop_site}.pdf")
   pdf(filename)
   print(g1)
   dev.off()
@@ -93,6 +94,6 @@ purrr::walk(aop_sites, ~save_tracts_for_aop_site(.x))
 
 # combine data into one table and save as csv
 
-fs::dir_ls("data") %>%
+fs::dir_ls("data/census-geoids") %>%
   purrr::map_df(~readr::read_csv(.x, col_types = "cccccccc")) %>%
   readr::write_csv(file.path(data_dir, "NEON-AOP-CensusGEOIDs.csv"))
