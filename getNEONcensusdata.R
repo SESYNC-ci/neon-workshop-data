@@ -1,9 +1,6 @@
-#loding libraries - not sure I need all of these yet
+# loading libraries - not sure I need all of these yet
 library(tidycensus)
 library(tidyverse)
-library(plyr)
-library(dplyr)
-library(tidyr)
 library(foreign)
 library(sf)
 
@@ -12,12 +9,19 @@ library(sf)
 #######################################################
 data_dir <- "/nfs/public-data/NEON_workshop_data/NEON"
 NEONgeoids <-  readr::read_csv(file.path(data_dir, "NEON-AOP-CensusGEOIDs.csv"), col_types = "cccccccc")
-state.use = unique(NEONgeoids$STATEFP)
+state_use <- unique(NEONgeoids$STATEFP)
 
 #######################################################
 # Retrive ACS dataset names and codes
 #######################################################
-ACScodes <-  readr::read_csv(file.path(data_dir, "NEON-AOP-ACSdatasets.csv"), col_types = "cc")
+# codes for ACS variables found here
+# https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr
+# and by adding _001, _002, etc to each of the codes 
+# survey = "acs5" is default argument for this dataset, gives 5 year estimate
+# ACScodes <- readr::read_csv(file.path(data_dir, "NEON-AOP-ACSdatasets.csv"), col_types = "cc")
+ACScodes <- readr::read_csv("NEON-AOP-ACSdatasets.csv", col_types = "cc")
+ACScodes <- ACScodes %>% 
+            mutate(dataset_sep = paste0(substr(dataset,1,6),"_",substr(dataset,7,9)))
 
 ########### Downloading Census Data ######################
 # must set up .Renviron file with an API key requested from here:
@@ -25,45 +29,37 @@ ACScodes <-  readr::read_csv(file.path(data_dir, "NEON-AOP-ACSdatasets.csv"), co
 # once they send you a key, put it in the .Renviron file using function
 # census_api_key('YOUR KEY', install = TRUE)
 
-# codes for ACS variables found here
-# https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr
-# and by adding _001, _002, etc to each of the codes 
-# survey = "acs5" is default argument for this dataset, gives 5 year estimate
-# to clear environment: remove(list=ls())
+readRenviron("~/.Renviron") # gets your R environment
+Sys.getenv("CENSUS_API_KEY") # displays your API key
 
-#A Personal census API key is required (see above). 
-#Save it in a file called "PersonalCensusAPIkey.txt"
-apikey = readLines("PersonalCensusAPIkey.txt")
-census_api_key(apikey, install = TRUE, overwrite=TRUE)
-readRenviron("~/.Renviron")
-Sys.getenv("CENSUS_API_KEY")
+# This example gets population data for state_use, a vector of all unique states with a NEON site.
+# I think the plan will be to read in a list of states (and maybe counties) overlaping the AOP footprints 
 
-#This example gets population data for state.use, a vector of all unique states with a NEON site
-#I think the plan will be to read in a list of states (and mabye counties) overlaping the AOP footprints 
-temp = "B01003001"
+ACSdataset <- unique(ACScodes$dataset_sep)  # vector of variable IDs from ACS
 
+Get_Dataset <- function(acs_vars, states, ...){
 
-
-GetOneDataset = function(temp, state.use, NEONgeoids){
-  ACSdataset = paste0(substr(temp,1,6),"_",substr(temp,7,9))
-  df <- get_acs(geography = "tract", 
-                        variables = ACSdataset,
-                        state = state.use,
-                        geometry = FALSE, survey = "acs5")
+                 df <- get_acs(geography = "tract", variables = acs_vars,
+                               state = states, geometry = FALSE, survey = "acs5")
   
-  NEON.ACS.one = left_join(NEONgeoids,df[,c(1,4)])
-  names(NEON.ACS.one)[which(names(NEON.ACS.one) == "estimate")] = ACSdataset
-
-  return(NEON.ACS.one[,which(names(NEON.ACS.one) == ACSdataset)])
+                 NEON_ACS <- left_join(df, ACScodes[ ,2:3], by = c("variable" = "dataset_sep"))
+                 
+                 NEON_ACS_Geoid <- left_join(NEON_ACS, NEONgeoids, by = "GEOID") %>% 
+                                   filter(!is.na("COUNTYFP"))
+                 # names(NEON_ACS_one)[which(names(NEON_ACS_one) == "estimate")] = ACSdataset
+                 # 
+                 # return(NEON_ACS_one[,which(names(NEON_ACS_one) == ACSdataset)])
 }
 
-NEON.ACS = NEONgeoids
-for(temp in ACScodes[,1]){
-  NEON.ACS.one = GetOneDataset(temp, state.use, NEONgeoids)
-  NEON.ACS = cbind(NEON.ACS,NEON.ACS.one)
-}
+# NEON.ACS = NEONgeoids
+# for(temp in ACScodes[,1]){
+#   NEON.ACS.one = GetOneDataset(temp, state_use, NEONgeoids)
+#   NEON.ACS = cbind(NEON.ACS,NEON.ACS.one)
+# }
 
-write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv"))
+NEON_ACS <- Get_Dataset(ACSdataset, state_use)
+
+write.csv(NEON_ACS, file.path(data_dir, "NEON_AOP_ACS.csv"))
 
 ########################################
 # a bunch of notes on the ACS. This is all found in the NEON-AOP-ACSdatasets.csv file.
