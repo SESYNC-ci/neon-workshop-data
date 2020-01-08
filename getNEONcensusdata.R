@@ -1,7 +1,6 @@
 #loding libraries - not sure I need all of these yet
 library(tidycensus)
 library(tidyverse)
-library(plyr)
 library(dplyr)
 library(tidyr)
 library(foreign)
@@ -38,12 +37,10 @@ census_api_key(apikey, install = TRUE, overwrite=TRUE)
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_API_KEY")
 
-#This example gets population data for state.use, a vector of all unique states with a NEON site
-#I think the plan will be to read in a list of states (and mabye counties) overlaping the AOP footprints 
-#temp = "B01003001"
-
-
-
+##############################################################################################
+#Function to query the ACS API for all states containing a NEON site. The tract level data is
+#then joined to the list of tracts overlaping the sites provided by Kelly.
+##############################################################################################
 GetOneDataset = function(temp, state.use, NEONgeoids){
   ACSdataset = paste0(substr(temp,1,6),"_",substr(temp,7,9))
   df <- get_acs(geography = "tract", 
@@ -51,17 +48,22 @@ GetOneDataset = function(temp, state.use, NEONgeoids){
                         state = state.use,
                         geometry = FALSE, survey = "acs5")
   
-  NEON.ACS.one = left_join(NEONgeoids,df[,c(1,4)])
+  NEON.ACS.one = dplyr::left_join(NEONgeoids,df[,c(1,4)])
   names(NEON.ACS.one)[which(names(NEON.ACS.one) == "estimate")] = ACSdataset
 
   return(NEON.ACS.one[,which(names(NEON.ACS.one) == ACSdataset)])
 }
 
+##############################################################################################
+#Loop through all the ACS variables selected earlier and provided in the data.frame: ACScodes
+#After each call to GetOneDataset, bind the new data to the NEON.ACS data.frame
+##############################################################################################
 NEON.ACS = NEONgeoids
-for(temp in ACScodes[,1]){
+for(temp in ACScodes$dataset){
   NEON.ACS.one = GetOneDataset(temp, state.use, NEONgeoids)
   NEON.ACS = cbind(NEON.ACS,NEON.ACS.one)
 }
 
-write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv"))
-
+#Write the new data.frame to disk. 
+#write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv"))
+write.csv(NEON.ACS,"/research-home/aelmore/NEON/NEON-AOP-ACS.csv")
