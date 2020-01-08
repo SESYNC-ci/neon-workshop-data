@@ -10,7 +10,7 @@ data_dir <- "/nfs/public-data/NEON_workshop_data/NEON"
 # read in data
 ACS <- readr::read_csv(file.path(data_dir, "NEON_AOP_ACS.csv"), col_types = "nccnccccccccc") # ACS data
 # ACS <- readr::read_csv("NEON_AOP_ACS.csv", col_types = "nccnccccccccc") # ACS data
-NLCD <- readr::read_csv(file.path(data_dir, "NEON-AOP-LandCover.csv"), col_types = "cccccccccccccccccccc") # NLCD data
+NLCD <- readr::read_csv(file.path(data_dir, "NEON-AOP-LandCover.csv"), col_types = "cnnnnnnnnnnnnnnnnnnn") # NLCD data
 # NASS <-  # NASS data
 
 ```
@@ -54,5 +54,8 @@ plot_var(emp, Site, mean_employed)
 
 # developed land
 plot_var(NLCD, Site, all_developed)
+
+# cultivated crops
+plot_var(NLCD, Site, `Cultivated Crops`)
 
 ```
