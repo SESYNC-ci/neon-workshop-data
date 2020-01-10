@@ -65,5 +65,5 @@ for(temp in ACScodes$dataset){
 }
 
 #Write the new data.frame to disk. 
-#write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv"))
+#write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv")) #why can't I write here?
 write.csv(NEON.ACS,"/research-home/aelmore/NEON/NEON-AOP-ACS.csv")
