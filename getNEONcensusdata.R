@@ -1,11 +1,22 @@
 #loding libraries - not sure I need all of these yet
 library(tidycensus)
 library(tidyverse)
-library(plyr)
 library(dplyr)
 library(tidyr)
 library(foreign)
 library(sf)
+
+#######################################################
+# Retrive fips codes 
+#######################################################
+data_dir <- "/nfs/public-data/NEON_workshop_data/NEON"
+NEONgeoids <-  readr::read_csv(file.path(data_dir, "NEON-AOP-CensusGEOIDs.csv"), col_types = "cccccccc")
+state.use = unique(NEONgeoids$STATEFP)
+
+#######################################################
+# Retrive ACS dataset names and codes
+#######################################################
+ACScodes <-  readr::read_csv(file.path(data_dir, "NEON-AOP-ACSdatasets.csv"), col_types = "cc")
 
 ########### Downloading Census Data ######################
 # must set up .Renviron file with an API key requested from here:
@@ -26,90 +37,33 @@ census_api_key(apikey, install = TRUE, overwrite=TRUE)
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_API_KEY")
 
-#This example gets population data for state 4, count 1, which is Apache County, Arizona
-#I think the plan will be to read in a list of states and counties overlaping the AOP footprints 
-population <- get_acs(geography = "tract", 
-                              variables = "B01003_001",
-                              state = 4, county = 1,
-                              geometry = FALSE, survey = "acs5")
+##############################################################################################
+#Function to query the ACS API for all states containing a NEON site. The tract level data is
+#then joined to the list of tracts overlaping the sites provided by Kelly.
+##############################################################################################
+GetOneDataset = function(temp, state.use, NEONgeoids){
+  ACSdataset = paste0(substr(temp,1,6),"_",substr(temp,7,9))
+  df <- get_acs(geography = "tract", 
+                        variables = ACSdataset,
+                        state = state.use,
+                        geometry = FALSE, survey = "acs5")
+  
+  NEON.ACS.one = dplyr::left_join(NEONgeoids,df[,c(1,4)])
+  names(NEON.ACS.one)[which(names(NEON.ACS.one) == "estimate")] = ACSdataset
 
+  return(NEON.ACS.one[,which(names(NEON.ACS.one) == ACSdataset)])
+}
 
-#Race related variables
-#https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr&table=B02001
-#B02001002 White Alone 
-#B02001003 Black or African American Alone
-#B02001004 American Indian and Alaska Native Alone
-#B02001005 Asian Alone
-#B02001006 Native Hawaiian and Other Pacific Islander Alone
-#B02001007 Some Other Race Alone
-#B02001008 Two or More Races:
-#B02001009 Two Races Including Some Other Race
-#B02001010 Two Races Excluding Some Other Race, and Three or More Races
+##############################################################################################
+#Loop through all the ACS variables selected earlier and provided in the data.frame: ACScodes
+#After each call to GetOneDataset, bind the new data to the NEON.ACS data.frame
+##############################################################################################
+NEON.ACS = NEONgeoids
+for(temp in ACScodes$dataset){
+  NEON.ACS.one = GetOneDataset(temp, state.use, NEONgeoids)
+  NEON.ACS = cbind(NEON.ACS,NEON.ACS.one)
+}
 
-
-#Age related variables
-#https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr&table=B01002
-#B01002001 Median Age -- Total:
-#B01002002 Median Age -- Male
-#B01002003 Median Age -- Female
-
-
-#employment related variables
-#https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr&table=B23025
-#B23025001 Total population 16 Years and Over
-#B23025002 In Labor Force:
-#B23025003 Civilian Labor Force:
-#B23025004 Employed
-#B23025005 Unemployed
-#B23025006 Armed Forces
-#B23025007 Not in Labor Force
-
-#economic activity related variables
-#https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr&table=C24070
-#many variables having to do with the type of work people do
-#C24070001 Total:
-#C24070002 Agriculture, Forestry, Fishing and Hunting, and Mining
-#C24070003 Construction
-#C24070004 Manufacturing
-#C24070005 Wholesale Trade
-#C24070006 Retail Trade
-#C24070007 Transportation and Warehousing, and Utilities
-#C24070008 Information
-#C24070009 Finance and Insurance, and Real Estate and Rental and Leasing
-#C24070010 Professional, Scientific, and Management, and Administrative and Waste Management Services
-#C24070011 Educational Services, and Health Care and Social Assistance
-#C24070012 Arts, Entertainment, and Recreation, and Accommodation and Food Services
-#C24070013 Other Services, Except Public Administration
-#C24070014 Public Administration
-
-#poverty related variables
-#https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr&table=B17001
-#B17001001 Total:
-#B17001002 Income in the Past 12 Months Below Poverty Level:
-#B17001031 Income in the Past 12 Months At or Above Poverty Level:
-
-allpovertydata <- get_acs(geography = "tract", 
-                      variables = "B17001_001",
-                      state = 4, county = 1,
-                      geometry = FALSE, survey = "acs5")
-
-belowpoverty <- get_acs(geography = "tract", 
-                      variables = "B17001_002",
-                      state = 4, county = 1,
-                      geometry = FALSE, survey = "acs5")
-
-abovepoverty <- get_acs(geography = "tract", 
-                   variables = "B17001_031",
-                   state = 4, county = 1,
-                   geometry = FALSE, survey = "acs5")
-
-#Transportation related variables
-# 
-#B08101001 Total: (workers 16 years and over)
-#B08101009 Car, Truck, or Van - Drove Alone:
-#B08101017 Car, Truck, or Van - Carpooled:
-#B08101025 Public Transportation (Excluding Taxicab):
-#B08101033 Walked:
-#B08101041 Taxicab, Motorcycle, Bicycle, or Other Means:
-#B08101049 Worked At Home:
-
+#Write the new data.frame to disk. 
+#write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv")) #why can't I write here?
+write.csv(NEON.ACS,"/research-home/aelmore/NEON/NEON-AOP-ACS.csv")
