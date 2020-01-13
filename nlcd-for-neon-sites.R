@@ -9,6 +9,7 @@ library(tidyr)
 # library(data.table)
 library(glue)
 library(fs)
+library(raster)
 
 data_dir <- "/nfs/public-data/NEON_workshop_data/NEON"
 
@@ -47,7 +48,7 @@ neon_site_data <- readr::read_csv("neon-field-sites.csv") %>%
 aop_x_sitedata <- aop %>% left_join(neon_site_data)
   
 # for one site
-get_nlcd_percents <- function(aop_site){
+get_nlcd_percents <- function(aop_site, dataset_type = "Impervious"){
   
   aop_site_sf <- aop_x_sitedata %>% dplyr::filter(Site == aop_site)
   site_landmass <- aop_site_sf %>% pull(landmass)
@@ -55,22 +56,22 @@ get_nlcd_percents <- function(aop_site){
     
   nlcd_site <- FedData::get_nlcd(aop_site_sf,
                       label = aop_site,
-                      dataset = "Land_Cover", 
+                      dataset = dataset_type, 
                       landmass = site_landmass,
                       year = nlcd_year,
-                      force.redo = TRUE)
+                      force.redo = FALSE)
   
   aop_site_sf_prj <- aop_site_sf %>% st_transform(proj4string(nlcd_site))
   nlcd_site_mask <- raster::mask(nlcd_site, as(aop_site_sf_prj, "Spatial"))
   
-  filename <- glue::glue("plots/nlcd/landcover-{aop_site}-{nlcd_year}.png")
-  png(filename)
-  # nlcd_agg <- raster::disaggregate(nlcd_site, fact = 3)
-  plot(nlcd_site, maxpixels=1e8, mar = c(1,1,1,1), mfrow = c(1,1))
-  plot(st_geometry(aop_site_sf_prj), add = TRUE, col = NA, border = "red")
-  dev.off()
-  
-  
+  if(dataset_type == "Land_Cover"){
+    filename <- glue::glue("plots/nlcd/landcover-{aop_site}-{nlcd_year}.png")
+    png(filename)
+    # nlcd_agg <- raster::disaggregate(nlcd_site, fact = 3)
+    plot(nlcd_site, maxpixels=1e8, mar = c(1,1,1,1), mfrow = c(1,1))
+    plot(st_geometry(aop_site_sf_prj), add = TRUE, col = NA, border = "red")
+    dev.off()    
+
   # tabulate number of cells in each type and 
   # Merge with legend to see land cover types
   cover <- raster::freq(nlcd_site_mask) %>%
@@ -80,19 +81,62 @@ get_nlcd_percents <- function(aop_site){
     dplyr::mutate(percent_cover = count/sum(count)) %>%
     dplyr::select(class_name, percent_cover) %>%
     mutate(Site = aop_site)
+  }
   
-  cover %>% readr::write_csv(glue::glue("data/nlcd/landcover-{aop_site}-{nlcd_year}.csv"))
+  if(dataset_type == "Impervious"){
+    
+    filename <- glue::glue("plots/nlcd/impervious-{aop_site}-{nlcd_year}.png")
+    png(filename)
+    plot(nlcd_site, maxpixels=1e8, mar = c(1,1,1,1), mfrow = c(1,1))
+    plot(st_geometry(aop_site_sf_prj), add = TRUE, col = NA, border = "green")
+    dev.off()    
+    
+    # area above 0%, 5%, 10%, 50% impervious
+
+    filename <- glue::glue("plots/nlcd/impervious-hist-{aop_site}-{nlcd_year}.pdf")
+    pdf(filename)
+    hist(nlcd_site_mask,
+         main = glue("Distribution of impervious cover at {aop_site} {nlcd_year}"),
+         xlab = "Impervious (%)", 
+         ylab = "Number of Pixels",
+         col = "springgreen")
+    dev.off()
+    
+    rcl <- matrix(c(-Inf, 5, 100,
+                    5, 10, 200, 
+                    10, 50, 300,
+                    50, 100, 400), ncol = 3, byrow = TRUE)
+    imp_rcl <- nlcd_site_mask %>%
+      raster::reclassify(rcl, include.lowest = TRUE)
+
+    imp_val_df <- data.frame(value = c(100, 200, 300, 400),
+                             class = c("below 5 percent", "5-10%", "10-50%", "over 50%"),
+                             stringsAsFactors = FALSE)
+    # tabulate area in each class
+    cover <- raster::freq(imp_rcl) %>%
+      as.data.frame() %>%
+      dplyr::left_join(imp_val_df, by = "value") %>%
+      dplyr::mutate(area_m2 = count*(30*30)) %>%
+      mutate(Site = aop_site)
+  }
+    
+  
+  cover %>% readr::write_csv(glue::glue("data/nlcd/{dataset_type}-{aop_site}-{nlcd_year}.csv"))
+  
 }
 
+aop_noD18 <- aop_sites[-c(49:54)]
 
-# get_nlcd_percents(aop_sites[55])
+get_nlcd_percents(aop_noD18[1], dataset_type = "Impervious")
+get_nlcd_percents(aop_sites[55], dataset_type = "Land_Cover")
 
-purrr::walk(aop_sites, ~get_nlcd_percents(.x))
+purrr::walk(aop_sites, ~get_nlcd_percents(.x, dataset_type = "Land_Cover"))
+purrr::walk(aop_noD18, ~get_nlcd_percents(.x, dataset_type = "Impervious"))
 
 
-# combine data into one table and save as csv
+# combine land cover data into one table and save as csv
 
-all_aop_landcover <- fs::dir_ls("data/nlcd") %>%
+all_aop_landcover <- fs::dir_ls("data/nlcd", regexp = "Land_Cover") %>%
   purrr::map_df(~readr::read_csv(.x)) %>%
   mutate(percent_cover = percent_cover*100) %>%
   tidyr::spread(key = class_name, value = percent_cover, fill = 0) %>%
@@ -101,3 +145,14 @@ all_aop_landcover <- fs::dir_ls("data/nlcd") %>%
   arrange(-all_developed)
 
 all_aop_landcover %>% readr::write_csv(file.path(data_dir, "NEON-AOP-LandCover.csv"))
+
+
+# combine impervious data into one table and save as csv
+
+all_aop_impervious <- fs::dir_ls("data/nlcd", regexp = "Impervious") %>%
+  purrr::map_df(~readr::read_csv(.x)) %>%
+  dplyr::select(Site, area_m2, class) %>%
+  tidyr::spread(key = class, value = area_m2,2, fill = 0) %>%
+  dplyr::select(Site, 4, 3, 2, 5, 6)
+
+all_aop_impervious %>% readr::write_csv(file.path(data_dir, "NEON-AOP-Impervioius.csv"))
