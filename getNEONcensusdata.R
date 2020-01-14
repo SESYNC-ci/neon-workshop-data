@@ -54,16 +54,11 @@ GetOneDataset = function(temp, state.use, NEONgeoids){
   return(NEON.ACS.one[,which(names(NEON.ACS.one) == ACSdataset)])
 }
 
-##############################################################################################
-#Loop through all the ACS variables selected earlier and provided in the data.frame: ACScodes
-#After each call to GetOneDataset, bind the new data to the NEON.ACS data.frame
-##############################################################################################
-NEON.ACS = NEONgeoids
-for(temp in ACScodes$dataset){
-  NEON.ACS.one = GetOneDataset(temp, state.use, NEONgeoids)
-  NEON.ACS = cbind(NEON.ACS,NEON.ACS.one)
-}
 
-#Write the new data.frame to disk. 
-#write.csv(NEON.ACS,file.path(data_dir, "NEON-AOP-ACS.csv")) #why can't I write here?
-write.csv(NEON.ACS,"/research-home/aelmore/NEON/NEON-AOP-ACS.csv")
+NEON_ACS <- Get_Dataset(ACSdataset, state_use)
+
+# look at how many variables were pulled in for each track (44 variables requested)
+# View(count(NEON_ACS, NAME.x))
+
+write_csv(NEON_ACS, file.path(data_dir, "NEON_AOP_ACS.csv"))
+
