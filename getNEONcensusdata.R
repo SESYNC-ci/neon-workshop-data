@@ -52,5 +52,3 @@ NEON_ACS <- Get_Dataset(ACSdataset, state_use)
 # View(count(NEON_ACS, NAME.x))
 
 write_csv(NEON_ACS, file.path(data_dir, "NEON_AOP_ACS.csv"))
-
-
