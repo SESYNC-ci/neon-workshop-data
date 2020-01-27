@@ -47,6 +47,7 @@ neon_site_data <- readr::read_csv("neon-field-sites.csv") %>%
 
 aop_x_sitedata <- aop %>% left_join(neon_site_data)
   
+aop_site <- aop_sites[1]
 # for one site
 get_nlcd_percents <- function(aop_site, dataset_type = "Impervious"){
   
@@ -84,6 +85,20 @@ get_nlcd_percents <- function(aop_site, dataset_type = "Impervious"){
   }
   
   if(dataset_type == "Impervious"){
+    hist_data <- hist(nlcd_site_mask, plot = FALSE,
+         breaks = seq(0,100, 5))
+    hist_df <- data.frame(site = aop_site,
+               imperv_class = hist_data$breaks[2:21],
+               imperv_freq = hist_data$counts,
+               stringsAsFactors = FALSE)
+    
+    hist_df %>% readr::write_csv(glue::glue("data/nlcd/imperv_hist_data-{dataset_type}-{aop_site}-{nlcd_year}.csv"))
+    
+    hist(nlcd_site_mask,
+         main = glue("Distribution of impervious cover at {aop_site} {nlcd_year}"),
+         xlab = "Impervious (%)", 
+         ylab = "Number of Pixels",
+         col = "springgreen")
     
     filename <- glue::glue("plots/nlcd/impervious-{aop_site}-{nlcd_year}.png")
     png(filename)
