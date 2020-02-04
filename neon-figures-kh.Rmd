@@ -1,0 +1,72 @@
+---
+title: "neon-figures"
+author: "Kelly Hondula"
+date: "1/27/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warnings = FALSE)
+```
+
+visualizations of neon data
+
+* histogram of impervious cover
+* stacked bar plot for land cover types, histograms for cover types
+
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+landcover <- readr::read_csv("NEON-AOP-LandCover.csv")
+head(landcover)
+
+lc_long <- landcover %>%
+  dplyr::select(-all_developed) %>%
+  tidyr::gather("class", "percentage", 2:19)
+
+lc_long %>%
+  ggplot(aes(x = Site, y = percentage, fill = class)) +
+  geom_bar(aes(fill = class), stat = "identity") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+fix colors to match NLCD 
+
+```{r}
+lc_long %>%
+  ggplot(aes(x = percentage, 
+             fill = class, col = class)) +
+  geom_histogram(alpha = 0.5) +
+  facet_wrap(vars(class), scales = "free") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+impervious histogram
+
+save histogram data for each site, based on 5% increments
+
+```{r}
+imperv_data <- fs::dir_ls(file.path("data", "nlcd"), 
+                          regexp = "imperv_hist_data") %>%
+  purrr::map_df(~readr::read_csv(.x))
+
+imperv_data_summary <- imperv_data %>% 
+  mutate(imperv_class_lp = stringr::str_pad(imperv_class, 3, "left", "0")) %>%
+  mutate(imperv_class_chr = paste("less than", imperv_class_lp, "perc")) %>%
+  group_by(imperv_class_chr) %>%
+  summarise(freq_allsites = sum(imperv_freq))
+
+imperv_data_summary %>%
+  ggplot(aes(x = imperv_class_chr, y = freq_allsites)) +
+  geom_bar(fill = "springgreen", col = "gray",
+           stat = "identity") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+
