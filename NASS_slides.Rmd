@@ -25,13 +25,14 @@ fert <- lnas %>%
 
 ```{r barplots, include=FALSE}
 b_plot <- function(df, y, z){
-          ggplot(df, aes(x = Site, y = {{y}}, fill = {{z}})) +
-          geom_col(position = "dodge")  + theme_bw() + 
-          theme(axis.text.x = element_text(angle = 90, vjust = 0.5)# ,
-          #       axis.text = element_text(size = 11),
-          #       axis.title = element_text(size = 18), 
-          #       legend.text = element_text(size = 11)
-                )
+          pl <- ggplot(df, aes(x = Site, y = {{y}}, fill = {{z}})) +
+                geom_col(position = "dodge")  + theme_bw() + 
+                theme(axis.text.x = element_text(angle = 90, vjust = 0.5)# ,
+          #           axis.text = element_text(size = 11),
+          #           axis.title = element_text(size = 18), 
+          #           legend.text = element_text(size = 11)
+                      )
+          return(pl)
           }
 ```
 
