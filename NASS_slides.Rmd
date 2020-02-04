@@ -9,10 +9,10 @@ knitr::opts_chunk$set(echo = FALSE)
 
 library(tidyverse); library(gridExtra)
 
-pwd <- "Y://NEON_workshop_data//NEON"
+pwd <- "/nfs/public-data/NEON_workshop_data/NEON"
 
-acs <- read.csv(paste0(pwd, "//NEON_AOP_ACS.csv"), stringsAsFactors = FALSE)
-nas <- read.csv(paste0(pwd,"//nassdatafinal.csv"), stringsAsFactors = FALSE)
+acs <- read.csv(paste0(pwd, "/NEON_AOP_ACS.csv"), stringsAsFactors = FALSE)
+nas <- read.csv(paste0(pwd,"/nassdatafinal.csv"), stringsAsFactors = FALSE)
 ```
 
 ```{r, include=FALSE}
@@ -82,19 +82,19 @@ all_fert <- b_plot(df = fert, y = amount, z = description) +
 all_fert
 ```
 
-## Crop and Fertilizer panel plot
+## Tomato and Fertilizer panel plot
 ```{r}
 grid.arrange(toms, tot_fert)
 
 ```
 
-## Crop and Fertilizer panel plot
+## Corn and Fertilizer panel plot
 ```{r}
 grid.arrange(corn, tot_fert)
 
 ```
 
-## Crop and Fertilizer panel plot
+## Crop and Total Fertilizer panel plot
 ```{r}
 grid.arrange(corn, all_fert)
 ```
@@ -157,7 +157,7 @@ income <- b_plot(df = nas, y = Net_Income_Per_Operation, z = "lightgreen") +
 income
 ```
 
-## Net Income and Crop
+## Crop and Net Income
 ```{r}
 grid.arrange(toms, income)
 ```
