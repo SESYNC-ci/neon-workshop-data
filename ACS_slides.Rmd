@@ -7,7 +7,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
-library(tidyverse)
+library(tidyverse); library(gridExtra)
 
 data_dir <- "/nfs/public-data/NEON_workshop_data/NEON"
 
@@ -34,32 +34,87 @@ pop <- sub_acs(ACS, "Population", mean_pop)
 # employed
 emp <- sub_acs(ACS, "Employed", mean_employed)
 
+# unemployed
+unemp <- sub_acs(ACS, "Unemployed", mean_unemployed)
+
+# Income in the Past 12 Months Below Poverty Level:
+ilesspov <- sub_acs(ACS, "Income in the Past 12 Months Below Poverty Level:", mean_in_below_pov)
+
+# agriculture and natural resources
+agri <- sub_acs(ACS, "Agriculture, Forestry, Fishing and Hunting, and Mining", mean_agri_nat_res)
+
+# educational and health
+edu <- sub_acs(ACS, "Educational Services, and Health Care and Social Assistance", mean_edu_hlth)
+
 ```
 
 
 ```{r plot function, include=FALSE}
-plot_var <- function(dat, x, y){
-            p <- ggplot(data = dat, aes(x = {{x}}, y = {{y}})) +
-                 geom_col() + 
-                 theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+plot_var <- function(dat, x, y, z){
+            p <- ggplot(data = dat, aes(x = {{x}}, y = {{y}}, fill = {{z}})) +
+                 geom_col(position = "dodge")  + theme_bw() + 
+                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
             return(p)
 }
 ```
 
+## Population
+
 ```{r plots}
-# population
-plot_var(pop, Site, mean_pop)
+plot_var(pop, x = Site, y = mean_pop, z = "blue") + 
+         theme(legend.position = "none") +
+         scale_fill_manual(values = c("blue"))
 ```
+
+## Employed
 
 ```{r}
-# employed
-plot_var(emp, Site, mean_employed)
+plot_var(emp, Site, mean_employed, z = "#66CC00") + 
+         theme(legend.position = "none") +
+         scale_fill_manual(values = c("#66CC00"))
 ```
+
+## Unemployed
 
 ```{r}
-
+u <- plot_var(unemp, Site, mean_unemployed, z = "#333300") + 
+              theme(legend.position = "none") +
+              scale_fill_manual(values = c("#333300"))
+u
 ```
+
+## Income below poverty
 
 ```{r}
-
+i <- plot_var(ilesspov, Site, mean_in_below_pov, z = "#666600") + 
+              theme(legend.position = "none") +
+              scale_fill_manual(values = c("#666600"))
+i
 ```
+
+---
+
+```{r}
+grid.arrange(i,u)
+```
+
+## Agriculture and natural resources
+
+```{r}
+plot_var(agri, Site, mean_agri_nat_res, z = "#FF9933") + 
+         theme(legend.position = "none") +
+         scale_fill_manual(values = c("#FF9933"))
+```
+
+## Educational services and health care
+
+```{r}
+plot_var(edu, Site, mean_edu_hlth, z = "#9900FF") + 
+         theme(legend.position = "none") +
+         scale_fill_manual(values = c("#9900FF"))
+```
+
+
+
+
+
