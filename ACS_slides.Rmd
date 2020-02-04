@@ -1,18 +1,19 @@
 ---
-title: "Visuals of non-NEON data"
-output: html_document
+title: "ACS demographic data across NEON AOP sites"
+output: 
+  ioslides_presentation: default
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
 library(tidyverse)
+
 data_dir <- "/nfs/public-data/NEON_workshop_data/NEON"
 
 # read in data
 ACS <- readr::read_csv(file.path(data_dir, "NEON_AOP_ACS.csv"), col_types = "nccnccccccccc") # ACS data
 # ACS <- readr::read_csv("NEON_AOP_ACS.csv", col_types = "nccnccccccccc") # ACS data
-NLCD <- readr::read_csv(file.path(data_dir, "NEON-AOP-LandCover.csv"), col_types = "cnnnnnnnnnnnnnnnnnnn") # NLCD data
-# NASS <-  # NASS data
-
 ```
 
 ```{r ACS subsetting, include=FALSE}
@@ -48,14 +49,17 @@ plot_var <- function(dat, x, y){
 ```{r plots}
 # population
 plot_var(pop, Site, mean_pop)
+```
 
+```{r}
 # employed
 plot_var(emp, Site, mean_employed)
+```
 
-# developed land
-plot_var(NLCD, Site, all_developed)
+```{r}
 
-# cultivated crops
-plot_var(NLCD, Site, `Cultivated Crops`)
+```
+
+```{r}
 
 ```
