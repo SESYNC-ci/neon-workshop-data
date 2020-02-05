@@ -63,6 +63,13 @@ dev.off()
 ```
 
 ```{r}
+landcover %>% 
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(-all_developed) %>%
+  DT::datatable()
+```
+
+```{r}
 nlcd_cols2 <- c("Open Water" = "#476BA0", 
                "Perennial Ice/Snow" = "#D1DDF9",
               "Developed, Open Space" = "#DDC9C9", 
@@ -105,27 +112,40 @@ print(class_facet_histograms)
 dev.off()
 ```
 
+```{r}
+read_csv(file.path(data_dir, "NEON-AOP-LandCover_areas.csv")) %>% 
+  mutate_if(is.numeric, round, 3) %>%
+  arrange(-all_developed) %>%
+  DT::datatable()
+```
 ## impervious
 
-save histogram data for each site, based on 5% increments
+calculate total area with more than 10% impervious at each site
+histogram of area
 
 ```{r}
-imperv_data <- fs::dir_ls(file.path("data", "nlcd"), 
-                          regexp = "imperv_hist_data") %>%
-  purrr::map_df(~readr::read_csv(.x))
+all_aop_impervious <- read_csv(file.path(data_dir, "NEON-AOP-Impervioius.csv")) %>%
+  mutate(count_above10 = `10-50%` + `over 50%`) %>%
+  mutate(area_above10_km2 = (count_above10*30)/1e6)
 
-imperv_data_summary <- imperv_data %>% 
-  mutate(imperv_class_lp = stringr::str_pad(imperv_class, 3, "left", "0")) %>%
-  mutate(imperv_class_chr = paste("less than", imperv_class_lp, "perc")) %>%
-  group_by(imperv_class_chr) %>%
-  summarise(freq_allsites = sum(imperv_freq))
+imp_hist <- all_aop_impervious %>%
+  ggplot(aes(x = area_above10_km2)) +
+  geom_histogram(fill = "gray", col = "black", bins = 20) +
+  theme_minimal() +
+  ylab("Number of sites") + 
+  xlab(expression(paste("Area with >10% impervious cover (", km^2, ")"))) 
 
-imperv_data_summary %>%
-  ggplot(aes(x = imperv_class_chr, y = freq_allsites)) +
-  geom_bar(fill = "springgreen", col = "gray",
-           stat = "identity") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
+```{r}
+all_aop_impervious %>% 
+  dplyr::select(Site, area_above10_km2) %>%
+  arrange(-area_above10_km2) %>%
+  DT::datatable()
+```
 
+```{r}
+pdf("nlcd_impervious.pdf", width = 5, height = 3)
+print(imp_hist)
+dev.off()
+```
