@@ -49,7 +49,7 @@ aop_x_sitedata <- aop %>% left_join(neon_site_data)
   
 aop_site <- aop_sites[1]
 # for one site
-get_nlcd_percents <- function(aop_site, dataset_type = "Impervious"){
+get_nlcd_percents <- function(aop_site, dataset_type = "Land_Cover"){
   
   aop_site_sf <- aop_x_sitedata %>% dplyr::filter(Site == aop_site)
   site_landmass <- aop_site_sf %>% pull(landmass)
@@ -80,8 +80,9 @@ get_nlcd_percents <- function(aop_site, dataset_type = "Impervious"){
     dplyr::filter(!is.na(value)) %>%
     dplyr::left_join(nlcd_codes, by = c("value" = "Class")) %>%
     dplyr::mutate(percent_cover = count/sum(count)) %>%
-    dplyr::select(class_name, percent_cover) %>%
+    dplyr::select(class_name, count, percent_cover) %>%
     mutate(Site = aop_site)
+  
   }
   
   if(dataset_type == "Impervious"){
@@ -161,6 +162,16 @@ all_aop_landcover <- fs::dir_ls("data/nlcd", regexp = "Land_Cover") %>%
 
 all_aop_landcover %>% readr::write_csv(file.path(data_dir, "NEON-AOP-LandCover.csv"))
 
+all_aop_landcover_areas <- fs::dir_ls("data/nlcd", regexp = "Land_Cover") %>%
+  purrr::map_df(~readr::read_csv(.x)) %>% 
+  mutate(area_ha = (count*30)/1e4) %>%
+  dplyr::select(-count, -percent_cover) %>%
+  tidyr::spread(key = class_name, value = area_ha, fill = 0) %>%
+  mutate(all_developed = `Developed High Intensity` + `Developed, Low Intensity` +
+           `Developed, Medium Intensity` + `Developed, Open Space`) %>%
+  arrange(-all_developed)
+
+all_aop_landcover_areas %>% readr::write_csv(file.path(data_dir, "NEON-AOP-LandCover_areas.csv"))
 
 # combine impervious data into one table and save as csv
 
