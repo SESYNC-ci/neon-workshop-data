@@ -97,7 +97,7 @@ class_facet_histograms <- lc_areas_long %>%
   ggplot(aes(x = area_ha, 
              fill = class, col = class)) +
   geom_histogram(alpha = 0.5, bins = 10) +
-  facet_wrap(vars(class), scales = "free") +
+  facet_wrap(vars(class), scales = "free_x") +
   theme_minimal() + 
   theme(legend.position = "none") +
   ylab("Number of sites") + xlab("Area (hectares)") +
