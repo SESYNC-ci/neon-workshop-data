@@ -27,9 +27,9 @@ fert <- lnas %>%
 b_plot <- function(df, y, z){
           pl <- ggplot(df, aes(x = Site, y = {{y}}, fill = {{z}})) +
                 geom_col(position = "dodge")  + theme_bw() + 
-                theme(axis.text.x = element_text(angle = 90, vjust = 0.5)# ,
-          #           axis.text = element_text(size = 11),
-          #           axis.title = element_text(size = 18), 
+                theme(axis.text.x = element_text(angle = 90, vjust = 0.5) ,
+                      axis.text = element_text(size = 8),
+                      axis.title = element_text(size = 16)#, 
           #           legend.text = element_text(size = 11)
                       )
           return(pl)
@@ -43,7 +43,7 @@ b_plot <- function(df, y, z){
 ## Corn Acres harvested
 ```{r}
 corn <- b_plot(df = nas, y = Corn_Acres_Harvested, z = "gold") + 
-        theme(legend.position = "none") +
+        theme(legend.position = "none") + ylab("corn acres harvested") +
         scale_fill_manual(values = c("gold"))
 corn
 ```
@@ -59,9 +59,16 @@ toms
 ## Total acres treated with fertilizer
 ```{r}
 tot_fert <- b_plot(df = nas, y = Acres_Treated_Fert_Total, z = "#1B9E77") + 
-            theme(legend.position = "none") + 
+            theme(legend.position = "none") + ylab("total acres treated w/ fertilizer") +
             scale_fill_manual(values = c("#1B9E77"))
 tot_fert
+```
+
+```{r, include=FALSE, eval=FALSE}
+# print fertilizer figure
+pdf("total_fertilizer_nass.pdf", width = 10, height = 6)
+print(tot_fert)
+dev.off()
 ```
 
 ## Acres treated with Organic fertilizer
@@ -91,8 +98,14 @@ grid.arrange(toms, tot_fert)
 
 ## Corn and Fertilizer panel plot
 ```{r}
-grid.arrange(corn, tot_fert)
+c_n <- grid.arrange(corn, tot_fert)
+c_n
+```
 
+```{r, include=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+# print fertilizer and corn figure
+c_n_plot <- arrangeGrob(corn, tot_fert) #generates 
+ggsave(file="corn_fertilizer_nass.pdf", c_n_plot) #saves 
 ```
 
 ## Crop and Total Fertilizer panel plot
@@ -107,9 +120,16 @@ grid.arrange(corn, all_fert)
 ## Proportion of Ag land Woman-owned
 ```{r}
 prop_w <- b_plot(df = nas, y = Percent_Ag_Land_In_Crop_Woman_Owned, z = "cyan4") + 
-          theme(legend.position = "none") + 
+          theme(legend.position = "none") + ylab("proportion ag land woman owned") + 
           scale_fill_manual(values = c("cyan4"))
 prop_w
+```
+
+```{r, include=FALSE, eval=FALSE}
+# print woman-owned figure
+pdf("prop_woman_owned_nass.pdf", width = 10, height = 6)
+print(prop_w)
+dev.off()
 ```
 
 ## Acres per Woman-owned Operation
@@ -153,10 +173,18 @@ grid.arrange(animal, gd)
 ## Net Income per Operation
 ```{r}
 income <- b_plot(df = nas, y = Net_Income_Per_Operation, z = "lightgreen") + 
-          theme(legend.position = "none") + 
+          theme(legend.position = "none") + ylab("net income per operation") +
           scale_fill_manual(values = c("lightgreen"))
 income
 ```
+
+```{r, include=FALSE, eval=FALSE}
+# print net income figure
+pdf("net_income_op_nass.pdf", width = 10, height = 6)
+print(income)
+dev.off()
+```
+
 
 ## Crop and Net Income
 ```{r}
