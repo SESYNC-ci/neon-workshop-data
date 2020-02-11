@@ -8,4 +8,5 @@ This repository includes:
 * scripts for plotting neon sites
   - `map.R`
 * scripts for plotting social science data   
-  - `visuals_non-neon_data.Rmd`
+  - `ACS_slides.Rmd`
+  - `NASS_slides.Rmd`
